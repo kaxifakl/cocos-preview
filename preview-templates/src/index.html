@@ -1,0 +1,158 @@
+<div id="app">
+    <div class="toolbar">
+        <div class="item"><button @click="clickShowPanel">
+                <span v-text="!showPanel?'Show NodePanel':'Hide NodePanel'"></span>
+            </button>
+        </div>
+        <div class="item"><select id="opts-device">
+                <option value="0">Default</option>
+                <option value="1">Apple iPhone 5</option>
+                <option value="2">Apple iPhone 6</option>
+                <option value="3">Apple iPhone 6 Plus</option>
+                <option value="4">Apple iPhone 7</option>
+                <option value="5">Apple iPhone 7 Plus</option>
+                <option value="6">Apple iPhone X</option>
+                <option value="7">Apple iPad</option>
+                <option value="8">Apple iPad Air 2</option>
+                <option value="9">Apple iPad Pro 10.5-inch</option>
+                <option value="10">Apple iPad Pro 12.9-inch</option>
+                <option value="11">Huawei P9</option>
+                <option value="12">Huawei Mate9 Pro</option>
+                <option value="13">Google Nexus 5</option>
+                <option value="14">Google Nexus 5X</option>
+                <option value="15">Google Nexus 6</option>
+                <option value="16">Google Nexus 7</option>
+            </select></div>
+        <div class="item"><button id="btn-rotate">Rotate</button></div><span style="font-size: small;"
+            class="item">Debug Mode:</span>
+        <div class="item"><select id="opts-debug-mode">
+                <option value="0">None</option>
+                <option value="1">Info</option>
+                <option value="2">Warn</option>
+                <option value="3">Error</option>
+                <option value="4">Info For Web Page</option>
+                <option value="5">Warn For Web Page</option>
+                <option value="6">Error For Web Page</option>
+            </select></div>
+        <div class="item"><button id="btn-show-fps">Show FPS</button></div>
+        <div class="item"><span style="font-size: small;" class="item">FPS:</span><input id="input-set-fps"
+                type="number"></div>
+        <div style="margin-right: 0px;" class="item"><button id="btn-pause">Pause</button></div>
+        <div class="item"><button id="btn-step" style="display: none;">Step</button></div>
+        <div class="item"><button id="btn-recompile">Recompile</button></div>
+        <div id="recompiling"><span>Recompiling...</span></div>
+        <div class="item"><button id="clickTexture" @click="clickTexture">Cache</button></div>
+    </div>
+    <div id="container">
+        <div id="node-panel" v-if="showPanel">
+            <el-input type="text" placeholder="搜索..." v-model="filterText"></el-input>
+            <div id="tree-box">
+                <el-tree class="filter-tree" :data="nodeTreeData" node-key="id" :props="defaultProps"
+                    :default-expanded-keys="nodeTreeExpandedKeys" @node-click="clickNodeItem"
+                    @node-expand="clickNodeExpand" @node-collapse="clickNodeCollapse" :filter-node-method="filterNode"
+                    ref="tree" :expand-on-click-node="false">
+                    <span slot-scope="{node,data}"
+                        v-bind:class="['el-tree-node__label',{'node-tree-item-color':!data.node.active}]">
+                        <span v-text="data.label"></span>
+                    </span>
+                </el-tree>
+            </div>
+        </div>
+        <div id="node-info-panel" v-if="showPanel&&getCurrentNode">
+            <div v-if="getCurrentNode" class="info-box">
+                <div class="line-item">
+                    <el-checkbox v-model="getCurrentNode.active"></el-checkbox>
+                    <el-input type="text" v-model="getCurrentNode.name"></el-input>
+                </div>
+                <el-collapse v-model="collapseNames" ref="collapse">
+                    <el-collapse-item v-for="(item,index) in allComp" :name="item.index">
+                        <template slot="title">
+                            <el-checkbox v-if="item.name!='Node'" v-model="item.comp.enabled"></el-checkbox>
+                            <div style="width: 100%; height: 30px;">
+                                <span v-text="item.name" style="padding-bottom: 5px;"></span>
+                                <el-button class="log-comp" @click="(e)=>{logComp(item,e)}">
+                                    <i class="el-icon-warning"></i>
+                                </el-button>
+                                <el-button class="log-comp" @click="(e)=>{exportComp(item,e)}">
+                                    <i class="el-icon-s-opportunity"></i>
+                                </el-button>
+                            </div>
+                        </template>
+                        <div class="comp-value" v-for="c in getCompValues(item.name,item)">
+                            <div class="comp-value-line">
+                                <div class="comp-value-label">
+                                    <span v-text="c.name"></span>
+                                </div>
+                                <div class="comp-value-line" v-for="v in c.values">
+                                    <span style="padding-left: 4px;padding-right: 4px;" v-text="v.name"></span>
+                                    <el-input v-if="c.type=='value'" type="text" :value="item.comp[v.key]"
+                                        @input="e=>{onInput(e,item,v)}" :disabled="v.lock"></el-input>
+                                    <el-color-picker v-if="c.type=='color'" v-model="item.comp[v.key]">
+                                    </el-color-picker>
+                                    <el-select v-if="c.type=='list'" v-model="item.comp[v.key]">
+                                        <el-option v-for="option in c.list()" :key="option" :label="option"
+                                            :value="option">
+                                        </el-option>
+                                    </el-select>
+                                </div>
+                            </div>
+                        </div>
+                    </el-collapse-item>
+                </el-collapse>
+            </div>
+        </div>
+        <div id="content" class="content">
+            <div class="contentWrap">
+                <div id="GameDiv" class="wrapper">
+                    <div id="Cocos2dGameContainer">
+                        <canvas id="GameCanvas" width="375" height="667" class="gameCanvas" tabindex="99"></canvas>
+                    </div>
+                    <div id="splash">
+                        <div class="progress-bar stripes">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div id="bulletin">
+                        <div id="sceneIsEmpty" class="inner">预览场景中啥都没有，加点什么，或在编辑器中打开其它场景吧</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <el-dialog class="custom-dialog" :title="cacheInfo" :visible.sync="centerDialogVisible">
+        <div id="texture-content">
+            <div>
+                <div style="float: right; margin-right: 2px;">
+                    <i class="el-icon-search" style="color:#fd8628;"></i>
+                    <el-input class="cache-search" v-model="cacheSearch"></el-input>
+                </div>
+            </div>
+            <div id="texture-list">
+                <el-table :data="getCacheData" height="100%" border :default-sort="{prop:'size',order:'descending'}"
+                    style="width: 100%;">
+                    <el-table-column prop="type" label="Type" width="180" :filters="cacheFilters" :filter-method="(v,r)=>{return r.type==v}">
+                    </el-table-column>
+                    <el-table-column prop="name" label="Name" width="180">
+                    </el-table-column>
+                    <el-table-column label="Preview">
+                        <template slot-scope="scope" width="180">
+                            <img :src="getImgUrl(scope.row.preview)" style="max-height: 60px;max-width: 120px;"
+                                v-if="scope.row.preview">
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="id" label="ID" width="280">
+                    </el-table-column>
+                    <el-table-column prop="size" label="Size(MB)" width="180" sortable>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+    </el-dialog>
+</div>
+
+<!-- <script src="app/node_modules/vue/dist/vue.js"></script> -->
+<!-- <script src="./src/element-ui.js"></script> -->
+<script src="./src/vue.min.js"></script>
+<script src="./src/element-ui.js"></script>
+<script src="./src/config.js"></script>
+<script src="./src/index.js"></script>
