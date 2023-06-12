@@ -4,6 +4,11 @@
 
 cocos-preview是基于[ccc-devtools](https://github.com/potato47/ccc-devtools)造出来的轮子，同时进行了一部分优化，提供更好的开发体验
 
+## 使用
+暂时只支持2.x版本，只做了2.4.x以上兼容测试
+
+将preview-templates文件夹放在工程下重启客户端即可
+
 ## 优化
 
 1.界面结构优化，使用更大的节点树面板
